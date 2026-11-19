@@ -1,0 +1,2349 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="Kai Fischer" />
+  <title>Frost-Manager – Entwickelt von Kai Fischer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+
+    /* Print Optimierung für Magnetwand-Liste */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 12mm 14mm;
+      }
+
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 11pt;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .print-only {
+        display: block !important;
+      }
+
+      .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+      }
+
+      .print-table th,
+      .print-table td {
+        border: 1px solid #334155;
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      .print-table th {
+        background-color: #f1f5f9 !important;
+        font-weight: 700;
+        font-size: 9.5pt;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .print-table tr {
+        page-break-inside: avoid;
+      }
+
+      .print-checkbox {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 1.5px solid #0f172a;
+        border-radius: 2px;
+        vertical-align: middle;
+      }
+
+      .print-section-break {
+        page-break-before: always;
+      }
+    }
+
+    @media screen {
+      .print-only {
+        display: none;
+      }
+    }
+
+    /* Vorschau-Tabellen-Stil auf dem Bildschirm (identisch zum Ausdruck) */
+    .preview-sheet .print-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .preview-sheet .print-table th,
+    .preview-sheet .print-table td {
+      border: 1px solid #334155;
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: middle;
+      font-size: 10pt;
+      color: #0f172a;
+    }
+    .preview-sheet .print-table th {
+      background-color: #f1f5f9;
+      font-weight: 700;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .preview-sheet .print-checkbox {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid #0f172a;
+      border-radius: 2px;
+      vertical-align: middle;
+    }
+    .preview-sheet .print-section-break {
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 2px dashed #cbd5e1;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen antialiased selection:bg-sky-100 selection:text-sky-900">
+
+  <!-- SCREEN UI (wird beim Drucken komplett ausgeblendet) -->
+  <div id="app-screen" class="no-print pb-20">
+
+    <!-- Top Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-sm shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18M3 12l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3m-9-9l6 6m0-6l-6 6" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h1 class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 leading-tight">Frost-Manager</h1>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-sky-50 border border-sky-200 text-[11px] font-semibold text-sky-800">
+                von Kai Fischer
+              </span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+              <span id="sync-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span id="sync-status-text">Verbinde Datenbank...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Header Actions -->
+        <div class="flex items-center gap-2">
+          <button onclick="openModal('about-modal')" title="Über dieses Programm"
+            class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-sm font-medium transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="hidden lg:inline">Info</span>
+          </button>
+
+          <button onclick="openSettingsModal()" title="Standorte & Kategorien verwalten"
+            class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-sm font-medium transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span class="hidden md:inline">Orte & Kategorien</span>
+          </button>
+
+          <button onclick="openBackupModal()" title="Backup speichern & laden"
+            class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-sm font-medium transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span class="hidden sm:inline">Backup laden / sichern</span>
+          </button>
+
+          <button onclick="openPrintDialog()"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white text-sm font-semibold shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span>Liste drucken</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+
+      <!-- KPI / Schnellübersicht -->
+      <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">Gesamt-Einträge</div>
+          <div id="kpi-total" class="text-2xl font-extrabold text-slate-900 mt-1">0</div>
+          <div id="kpi-location-hint" class="text-xs text-slate-400 mt-0.5 truncate">Alle Gefrierorte</div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <div class="text-xs font-medium text-emerald-600 uppercase tracking-wider">Frisch (&gt; 30 Tage)</div>
+          <div id="kpi-fresh" class="text-2xl font-extrabold text-emerald-700 mt-1">0</div>
+          <div class="text-xs text-slate-400 mt-0.5">Optimal gelagert</div>
+        </div>
+        <button onclick="toggleExpiringFilter()" id="kpi-soon-card"
+          class="text-left bg-white rounded-2xl border border-slate-200 hover:border-amber-400 p-4 shadow-sm transition group">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-amber-600 uppercase tracking-wider">Bald verbrauchen</span>
+            <span class="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 group-hover:bg-amber-200">Filter</span>
+          </div>
+          <div id="kpi-soon" class="text-2xl font-extrabold text-amber-600 mt-1">0</div>
+          <div class="text-xs text-slate-400 mt-0.5">MHD in &le; 30 Tagen</div>
+        </button>
+        <button onclick="toggleExpiringFilter()" id="kpi-expired-card"
+          class="text-left bg-white rounded-2xl border border-slate-200 hover:border-rose-400 p-4 shadow-sm transition group">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-rose-600 uppercase tracking-wider">MHD erreicht</span>
+            <span class="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 group-hover:bg-rose-200">Prüfen</span>
+          </div>
+          <div id="kpi-expired" class="text-2xl font-extrabold text-rose-600 mt-1">0</div>
+          <div class="text-xs text-slate-400 mt-0.5">Zuerst verbrauchen</div>
+        </button>
+      </section>
+
+      <!-- Zweispaltiges Layout: Links Eingabeformular, Rechts Bestand -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- LINKE SPALTE: Artikel erfassen / bearbeiten -->
+        <section class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <h2 id="form-title" class="font-bold text-base">Neues Lebensmittel einlagern</h2>
+            </div>
+            <button type="button" id="cancel-edit-btn" onclick="resetForm()" class="hidden text-xs bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded-lg font-medium">
+              Abbrechen
+            </button>
+          </div>
+
+          <form id="item-form" onsubmit="handleSaveItem(event)" class="p-5 space-y-4">
+            <input type="hidden" id="edit-item-id" value="" />
+
+            <!-- Gefrierort & Fach -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label for="item-location" class="block text-xs font-semibold uppercase tracking-wide text-slate-600">Gefrierort *</label>
+                  <button type="button" onclick="quickAddLocation()" class="text-xs font-semibold text-sky-600 hover:text-sky-700">+ Neu</button>
+                </div>
+                <select id="item-location" required
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
+                </select>
+              </div>
+              <div>
+                <label for="item-drawer" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">Schubfach / Ebene</label>
+                <input type="text" id="item-drawer" placeholder="z. B. Fach 2 oben"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none" />
+              </div>
+            </div>
+
+            <!-- Kategorie -->
+            <div>
+              <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <label for="item-category" class="block text-xs font-semibold uppercase tracking-wide text-slate-600">Kategorie *</label>
+                  <button type="button" id="unlock-category-btn" onclick="unlockCategoryAutoDetect()"
+                    title="Manuelle Sperre aufheben und Kategorie wieder automatisch erkennen"
+                    class="hidden inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-sky-700 bg-slate-100 hover:bg-sky-50 border border-slate-200 px-2 py-0.5 rounded-md transition">
+                    <span>🔒 Manuell</span>
+                    <span class="text-sky-600 underline">Auto</span>
+                  </button>
+                </div>
+                <div class="flex items-center gap-3">
+                  <button type="button" id="recalc-mhd-edit-btn" onclick="recalculateMhdFromCategoryInEdit()"
+                    class="hidden text-xs font-semibold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-md transition">
+                    ↻ MHD an Kategorie anpassen
+                  </button>
+                  <button type="button" onclick="quickAddCategory()" class="text-xs font-semibold text-sky-600 hover:text-sky-700">+ Eigene Kategorie</button>
+                </div>
+              </div>
+              <select id="item-category" required onchange="onUserCategoryChange()"
+                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
+              </select>
+            </div>
+
+            <!-- Bezeichnung / Inhalt -->
+            <div>
+              <label for="item-name" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">Inhalt / Bezeichnung *</label>
+              <div class="flex gap-2">
+                <input type="text" id="item-name" required placeholder="z. B. Rinderhackfleisch, Gulasch, Zucchini..."
+                  oninput="handleNameTyping()"
+                  class="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none" />
+                <button type="button" id="ai-check-btn" onclick="calculateSmartMHD(true)"
+                  title="Haltbarkeit mit KI & Lebensmittel-Datenbank ermitteln"
+                  class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 active:bg-sky-200 text-sky-700 border border-sky-200 text-xs font-bold transition">
+                  <svg id="ai-spinner" class="hidden animate-spin h-4 w-4 text-sky-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span id="ai-btn-label">MHD ermitteln</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Menge & Einheit -->
+            <div class="grid grid-cols-12 gap-3">
+              <div class="col-span-5">
+                <label for="item-quantity" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">Menge *</label>
+                <input type="number" id="item-quantity" step="any" min="0.01" value="500" required
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none" />
+              </div>
+              <div class="col-span-7">
+                <label for="item-unit" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">Einheit *</label>
+                <select id="item-unit"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
+                  <option value="g">Gramm (g)</option>
+                  <option value="kg">Kilogramm (kg)</option>
+                  <option value="Stk.">Stück (Stk.)</option>
+                  <option value="Port.">Portionen (Port.)</option>
+                  <option value="Pkg.">Packungen (Pkg.)</option>
+                  <option value="Beutel">Beutel</option>
+                  <option value="Dosen">Dosen / Schalen</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Einlagerungsdatum & Voraussichtliches MHD -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label for="item-frozen-date" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">Eingefroren am *</label>
+                <input type="date" id="item-frozen-date" required onchange="recalculateMhdFromMonths()"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none" />
+              </div>
+              <div>
+                <label for="item-mhd-date" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">Vorauss. MHD *</label>
+                <input type="date" id="item-mhd-date" required
+                  class="w-full rounded-xl border border-sky-300 bg-sky-50/50 px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none" />
+              </div>
+            </div>
+
+            <!-- KI / Wissensdatenbank Hinweisbox -->
+            <div id="mhd-info-box" class="rounded-xl bg-slate-100 border border-slate-200 p-3 text-xs text-slate-700 space-y-1">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                  <span id="mhd-source-badge" class="inline-block px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] uppercase">Richtwert</span>
+                  <span id="mhd-months-label">Empfohlene Lagerdauer: 6 Monate</span>
+                </span>
+                <div class="flex items-center gap-1">
+                  <button type="button" onclick="adjustMonths(-1)" class="w-6 h-6 rounded bg-white border border-slate-300 hover:bg-slate-50 font-bold text-slate-700">-1M</button>
+                  <button type="button" onclick="adjustMonths(1)" class="w-6 h-6 rounded bg-white border border-slate-300 hover:bg-slate-50 font-bold text-slate-700">+1M</button>
+                </div>
+              </div>
+              <p id="mhd-advice-text" class="text-slate-600 leading-relaxed">
+                Gib oben ein Lebensmittel ein – das voraussichtliche MHD bei -18 °C wird automatisch berechnet.
+              </p>
+            </div>
+
+            <!-- Notiz optional -->
+            <div>
+              <label for="item-note" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">Notiz (optional)</label>
+              <input type="text" id="item-note" placeholder="z. B. gewürzt, vom Metzger, für Sonntag..."
+                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none" />
+            </div>
+
+            <!-- Anzahl gleicher Einträge (nur beim Neuanlegen) -->
+            <div id="copies-row" class="flex items-center justify-between gap-3 rounded-xl bg-slate-50 border border-slate-200 px-3.5 py-2">
+              <label for="item-copies" class="text-xs font-semibold text-slate-700">
+                Anzahl identischer Einträge anlegen <span class="text-slate-400 font-normal">(z. B. 4 Beutel)</span>
+              </label>
+              <input type="number" id="item-copies" min="1" max="50" value="1"
+                class="w-20 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-sm font-bold text-center text-slate-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none" />
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="save-item-btn"
+              class="w-full py-3.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white font-bold text-sm shadow-sm transition flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span id="save-btn-text">In Gefrierbestand speichern</span>
+            </button>
+          </form>
+        </section>
+
+        <!-- RECHTE SPALTE: Filter, Tabs & Bestandsliste -->
+        <section class="lg:col-span-7 space-y-4">
+
+          <!-- Standort-Tabs -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-2 shadow-sm">
+            <div id="location-tabs" class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <!-- Dynamische Tabs -->
+            </div>
+          </div>
+
+          <!-- Such- und Filterleiste -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <!-- Suche -->
+              <div class="sm:col-span-5 relative">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="text" id="filter-search" oninput="renderInventory()" placeholder="Suchen (z. B. Hack, Brot...)"
+                  class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-sm outline-none focus:border-sky-500 transition" />
+              </div>
+
+              <!-- Kategorie-Filter -->
+              <div class="sm:col-span-4">
+                <select id="filter-category" onchange="renderInventory()"
+                  class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-sm font-medium text-slate-700 outline-none focus:border-sky-500">
+                  <option value="ALL">Alle Kategorien</option>
+                </select>
+              </div>
+
+              <!-- Sortierung -->
+              <div class="sm:col-span-3">
+                <select id="filter-sort" onchange="renderInventory()"
+                  class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-sm font-medium text-slate-700 outline-none focus:border-sky-500">
+                  <option value="mhd_asc">MHD (dringend zuerst)</option>
+                  <option value="frozen_desc">Zuletzt eingefroren</option>
+                  <option value="name_asc">Name (A–Z)</option>
+                  <option value="category_asc">Kategorie</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Aktive Filter-Pills & Druck-Schnellbutton -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
+              <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="filter-expiring-btn" onclick="toggleExpiringFilter()"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-amber-50 text-slate-700 font-semibold transition">
+                  <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span>Nur bald ablaufende (&le; 30 Tage)</span>
+                </button>
+                <button type="button" id="reset-filters-btn" onclick="resetFilters()" class="hidden text-sky-600 hover:underline font-medium px-2 py-1">
+                  Filter zurücksetzen
+                </button>
+              </div>
+
+              <button type="button" onclick="printCurrentLocationDirectly()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                <span id="quick-print-label">Aktuelle Ansicht drucken</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bestandsliste -->
+          <div id="inventory-list" class="space-y-2.5">
+            <!-- Karten werden per JS gerendert -->
+          </div>
+
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer mit Entwickler-Hinweis -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-700">❄️ Frost-Manager</span>
+        <span>·</span>
+        <span>Entwickelt von <strong class="text-slate-800">Kai Fischer</strong></span>
+      </div>
+      <div>
+        Kostenlos kopierbar &amp; frei weitergebbar · <button type="button" onclick="openModal('about-modal')" class="text-sky-600 hover:underline font-semibold">Programm-Info</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- PRINT AREA (Nur beim Drucken sichtbar!) -->
+  <div id="print-area" class="print-only">
+    <!-- Wird dynamisch vor dem Drucken befüllt -->
+  </div>
+
+  <!-- TOAST / NACHRICHTENBOX -->
+  <div id="toast-container" class="no-print fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- MODAL: DRUCKAUSWAHL -->
+  <div id="print-modal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-5">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900">Gefrierliste drucken</h3>
+        <button onclick="closeModal('print-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">✕</button>
+      </div>
+      <p class="text-sm text-slate-600">
+        Wähle aus, für welchen Gefrierschrank die Magnetwand-Liste mit Abhak-Kästchen gedruckt werden soll:
+      </p>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Gefrierort auswählen</label>
+          <select id="print-location-select" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-semibold">
+            <!-- Dynamisch -->
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Sortierung auf dem Ausdruck</label>
+          <select id="print-sort-select" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-medium">
+            <option value="category_drawer">Nach Kategorie & Schubfach (übersichtlich)</option>
+            <option value="mhd_asc">Nach Mindesthaltbarkeitsdatum (dringend zuerst)</option>
+            <option value="drawer_asc">Nach Schubfach / Ebene</option>
+            <option value="name_asc">Alphabetisch (A–Z)</option>
+          </select>
+        </div>
+        <label class="flex items-center gap-2.5 pt-1 cursor-pointer">
+          <input type="checkbox" id="print-empty-rows" checked class="w-4 h-4 rounded text-sky-600" />
+          <span class="text-sm text-slate-700">3 Leerzeilen am Ende für handschriftliche Nachträge drucken</span>
+        </label>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeModal('print-modal')" class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          Abbrechen
+        </button>
+        <button onclick="executePrintFromModal()" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          <span>Druckvorschau &amp; Drucken</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: VOLLBILD-DRUCKANSICHT (funktioniert auch wenn Iframe window.print blockiert) -->
+  <div id="print-preview-modal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col">
+    <!-- Obere Aktionsleiste -->
+    <div class="bg-slate-900 text-white px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 shrink-0">
+      <div class="flex items-center gap-3">
+        <span class="text-lg">🖨️</span>
+        <div>
+          <h3 class="text-sm sm:text-base font-bold leading-tight">Druckfertige Magnetwand-Liste (DIN A4)</h3>
+          <p class="text-xs text-slate-300">Klicke auf „Druckdialog starten“ oder öffne die Liste in einem neuen Tab / als Datei.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button type="button" onclick="triggerDirectBrowserPrint()"
+          class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs sm:text-sm shadow-sm transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          <span>Druckdialog starten (Strg+P)</span>
+        </button>
+
+        <button type="button" onclick="openPrintInNewTab()"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-semibold text-xs sm:text-sm transition">
+          <span>↗ In neuem Tab öffnen &amp; drucken</span>
+        </button>
+
+        <button type="button" onclick="downloadPrintableHTML()"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-semibold text-xs sm:text-sm transition">
+          <span>↓ Druckdatei (.html)</span>
+        </button>
+
+        <button type="button" onclick="closeModal('print-preview-modal')"
+          class="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs sm:text-sm">
+          Schließen ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- A4 Blatt-Vorschau -->
+    <div class="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center">
+      <div id="print-preview-sheet" class="preview-sheet bg-white text-slate-900 w-full max-w-[210mm] min-h-[260mm] rounded-xl shadow-2xl p-6 sm:p-[14mm] border border-slate-300">
+        <!-- Dynamischer Druckinhalt -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: STANDORTE & KATEGORIEN VERWALTEN -->
+  <div id="settings-modal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-xl border border-slate-200">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900">Gefrierorte & Kategorien verwalten</h3>
+        <button onclick="closeModal('settings-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-6">
+        <!-- Gefrierorte -->
+        <div class="space-y-3">
+          <h4 class="text-sm font-bold uppercase tracking-wider text-slate-700">Gefrierorte (z. B. Küche, Keller, Garage)</h4>
+          <div class="flex gap-2">
+            <input type="text" id="new-location-input" placeholder="Neuer Gefrierort..."
+              class="flex-1 rounded-xl border border-slate-300 px-3.5 py-2 text-sm outline-none focus:border-sky-500" />
+            <button type="button" onclick="addLocationFromSettings()" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold">
+              Hinzufügen
+            </button>
+          </div>
+          <div id="settings-locations-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+        </div>
+
+        <hr class="border-slate-200" />
+
+        <!-- Kategorien -->
+        <div class="space-y-3">
+          <h4 class="text-sm font-bold uppercase tracking-wider text-slate-700">Kategorien & Standard-Haltbarkeit</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+            <input type="text" id="new-cat-icon" value="📦" maxlength="4" placeholder="Icon"
+              class="sm:col-span-2 rounded-xl border border-slate-300 px-3 py-2 text-sm text-center outline-none focus:border-sky-500" />
+            <input type="text" id="new-cat-name" placeholder="Kategoriename..."
+              class="sm:col-span-5 rounded-xl border border-slate-300 px-3.5 py-2 text-sm outline-none focus:border-sky-500" />
+            <div class="sm:col-span-3 flex items-center gap-1">
+              <input type="number" id="new-cat-months" value="6" min="1" max="36"
+                class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500" />
+              <span class="text-xs text-slate-500 shrink-0">Mon.</span>
+            </div>
+            <button type="button" onclick="addCategoryFromSettings()" class="sm:col-span-2 px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold">
+              + Neu
+            </button>
+          </div>
+          <div id="settings-categories-list" class="space-y-2"></div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-slate-200 flex justify-end">
+        <button onclick="closeModal('settings-modal')" class="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold">
+          Fertig
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BACKUP (EXPORT / IMPORT) -->
+  <div id="backup-modal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-5">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900">Backup laden & Datensicherung</h3>
+        <button onclick="closeModal('backup-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">✕</button>
+      </div>
+      <div class="space-y-4">
+        <!-- Backup laden -->
+        <div class="rounded-xl border-2 border-dashed border-sky-300 bg-sky-50/60 p-4 space-y-3"
+          ondragover="event.preventDefault(); this.classList.add('border-sky-500', 'bg-sky-100/70');"
+          ondragleave="this.classList.remove('border-sky-500', 'bg-sky-100/70');"
+          ondrop="handleBackupDrop(event)">
+          <div>
+            <div class="text-sm font-bold text-slate-900">Backup-Datei laden (JSON)</div>
+            <div class="text-xs text-slate-600 mt-0.5">Wähle eine gespeicherte <code class="bg-white px-1 rounded">.json</code>-Datei aus oder ziehe sie hierher.</div>
+          </div>
+
+          <div class="flex flex-col gap-1.5 text-xs text-slate-700 bg-white/80 rounded-lg p-2.5 border border-sky-200">
+            <label class="flex items-center gap-2 cursor-pointer font-medium">
+              <input type="radio" name="import-mode" value="merge" checked class="text-sky-600" />
+              <span><strong>Zusammenführen (Standard):</strong> Vorhandene Einträge behalten &amp; Backup ergänzen</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer font-medium">
+              <input type="radio" name="import-mode" value="replace" class="text-sky-600" />
+              <span><strong>Komplett ersetzen:</strong> Aktuellen Bestand vor dem Laden leeren</span>
+            </label>
+          </div>
+
+          <input type="file" id="import-json-file" accept=".json,application/json" onchange="importDataJSON(event)" class="hidden" />
+          <button type="button" onclick="document.getElementById('import-json-file').click()"
+            class="w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white text-sm font-bold shadow-xs transition flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>JSON-Backup auswählen &amp; laden</span>
+          </button>
+        </div>
+
+        <hr class="border-slate-200" />
+
+        <!-- Backup erstellen -->
+        <div class="space-y-2">
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Neues Backup erstellen</div>
+          <button onclick="exportDataJSON()" class="w-full py-3 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 text-left flex items-center justify-between transition">
+            <div>
+              <div class="text-sm font-bold text-slate-900">Komplett-Backup herunterladen (JSON)</div>
+              <div class="text-xs text-slate-500">Alle Vorräte, Gefrierorte und Kategorien sichern</div>
+            </div>
+            <span class="text-sky-600 font-bold text-sm">↓ JSON</span>
+          </button>
+
+          <button onclick="exportDataCSV()" class="w-full py-3 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 text-left flex items-center justify-between transition">
+            <div>
+              <div class="text-sm font-bold text-slate-900">Als Excel/CSV-Tabelle exportieren</div>
+              <div class="text-xs text-slate-500">Für Tabellenkalkulationen (Excel, Numbers, Calc)</div>
+            </div>
+            <span class="text-emerald-600 font-bold text-sm">↓ CSV</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BESTÄTIGUNG (ersetzt window.confirm) -->
+  <div id="confirm-modal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-200 space-y-4">
+      <h3 id="confirm-title" class="text-base font-bold text-slate-900">Bestätigen</h3>
+      <p id="confirm-message" class="text-sm text-slate-600"></p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeModal('confirm-modal')" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          Abbrechen
+        </button>
+        <button id="confirm-ok-btn" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold">
+          Bestätigen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SCHNELLEINGABE (ersetzt window.prompt) -->
+  <div id="prompt-modal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-200 space-y-4">
+      <h3 id="prompt-title" class="text-base font-bold text-slate-900">Neuer Eintrag</h3>
+      <div>
+        <label id="prompt-label" class="block text-xs font-semibold text-slate-600 mb-1"></label>
+        <input type="text" id="prompt-input" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-sky-500" />
+      </div>
+      <div class="flex justify-end gap-2 pt-1">
+        <button onclick="closeModal('prompt-modal')" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          Abbrechen
+        </button>
+        <button id="prompt-ok-btn" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold">
+          Speichern
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ÜBER DAS PROGRAMM / ENTWICKLER-HINWEIS -->
+  <div id="about-modal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold">❄️</div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Frost-Manager</h3>
+            <p class="text-xs text-slate-500">Gefriertruhen- &amp; Vorratsverwaltung</p>
+          </div>
+        </div>
+        <button onclick="closeModal('about-modal')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">✕</button>
+      </div>
+
+      <div class="rounded-xl bg-sky-50 border border-sky-200 p-4 space-y-1">
+        <div class="text-xs font-semibold uppercase tracking-wider text-sky-700">Entwicklung &amp; Konzept</div>
+        <div class="text-base font-extrabold text-slate-900">Kai Fischer</div>
+        <p class="text-xs text-slate-600 pt-1">
+          Dieses Programm darf beliebig kopiert und an Familie, Freunde und Bekannte weitergegeben werden. Jeder PC speichert seinen eigenen Gefrierbestand separat.
+        </p>
+      </div>
+
+      <div class="flex justify-end">
+        <button onclick="closeModal('about-modal')" class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold">
+          Schließen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIREBASE & APPLICATION SCRIPT -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      deleteDoc,
+      onSnapshot,
+      collection
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- STANDARDDATEN ---
+    const DEFAULT_LOCATIONS = [
+      { id: 'loc_kueche', name: 'Küche', order: 1 },
+      { id: 'loc_hwr', name: 'Hauswirtschaftsraum', order: 2 },
+      { id: 'loc_keller', name: 'Keller / Truhe', order: 3 }
+    ];
+
+    const DEFAULT_CATEGORIES = [
+      { id: 'cat_fleisch', name: 'Fleisch', icon: '🥩', defaultMonths: 8 },
+      { id: 'cat_gefluegel', name: 'Geflügel', icon: '🍗', defaultMonths: 8 },
+      { id: 'cat_wurst', name: 'Wurst & Aufschnitt', icon: '🌭', defaultMonths: 3 },
+      { id: 'cat_fisch', name: 'Fisch & Meeresfrüchte', icon: '🐟', defaultMonths: 4 },
+      { id: 'cat_gemuese', name: 'Gemüse & Kräuter', icon: '🥦', defaultMonths: 10 },
+      { id: 'cat_obst', name: 'Obst & Beeren', icon: '🍓', defaultMonths: 10 },
+      { id: 'cat_brot', name: 'Brot & Backwaren', icon: '🥖', defaultMonths: 3 },
+      { id: 'cat_fertiggerichte', name: 'Fertiggerichte & Suppen', icon: '🍲', defaultMonths: 3 },
+      { id: 'cat_milch', name: 'Milchprodukte & Butter', icon: '🧈', defaultMonths: 4 },
+      { id: 'cat_sonstiges', name: 'Sonstiges', icon: '📦', defaultMonths: 6 }
+    ];
+
+    const FOOD_KNOWLEDGE_BASE = [
+      { keywords: ['hack', 'hackfleisch', 'mett', 'tartar', 'burger'], months: 2, categoryHint: 'cat_fleisch', tip: 'Hackfleisch hat eine große Oberfläche und sollte innerhalb von 1–2 Monaten bei -18 °C verbraucht werden.' },
+      { keywords: ['rind', 'rinder', 'steak', 'roastbeef', 'gulasch', 'rinderbraten'], months: 10, categoryHint: 'cat_fleisch', tip: 'Mageres Rindfleisch hält sich luftdicht verpackt 8–12 Monate bei -18 °C.' },
+      { keywords: ['schwein', 'schnitzel', 'kotelett', 'schweinebraten', 'nacken', 'filet'], months: 6, categoryHint: 'cat_fleisch', tip: 'Schweinefleisch ist bei -18 °C ca. 4–7 Monate haltbar (fetteres Fleisch etwas kürzer).' },
+      { keywords: ['hähnchen', 'hühnchen', 'pute', 'puten', 'geflügel', 'ente', 'gans'], months: 8, categoryHint: 'cat_gefluegel', tip: 'Geflügel ist bei -18 °C ca. 6–9 Monate haltbar. Gut verschließen, um Gefrierbrand zu vermeiden.' },
+      { keywords: ['wurst', 'bratwurst', 'wiener', 'bockwurst', 'aufschnitt', 'salami', 'schinken', 'speck'], months: 3, categoryHint: 'cat_wurst', tip: 'Wurstwaren und Schinken verlieren durch Salz & Fett nach ca. 2–3 Monaten an Aroma.' },
+      { keywords: ['fisch', 'lachs', 'forelle', 'kabeljau', 'seelachs', 'garnele', 'scampi', 'fischstäbchen'], months: 4, categoryHint: 'cat_fisch', tip: 'Fetter Fisch (z. B. Lachs) ca. 3 Monate, magerer Fisch (z. B. Kabeljau) bis zu 6 Monate.' },
+      { keywords: ['gemüse', 'brokkoli', 'blumenkohl', 'erbsen', 'bohnen', 'spinat', 'karotte', 'möhre', 'zucchini', 'paprika', 'mais'], months: 10, categoryHint: 'cat_gemuese', tip: 'Blanchiertes Gemüse bleibt bei -18 °C 8–12 Monate vitaminreich und knackig.' },
+      { keywords: ['kräuter', 'petersilie', 'schnittlauch', 'dill', 'basilikum', 'koriander'], months: 8, categoryHint: 'cat_gemuese', tip: 'Gehackte Kräuter lassen sich ideal in kleinen Dosen oder Eiswürfelformen einfrieren.' },
+      { keywords: ['obst', 'beeren', 'erdbeeren', 'himbeeren', 'heidelbeeren', 'blaubeeren', 'kirschen', 'pflaumen', 'zwetschgen', 'apfel'], months: 10, categoryHint: 'cat_obst', tip: 'Beeren und Steinobst halten 8–12 Monate. Tipp: Erst auf einem Blech vorfrieren, damit nichts verklumpt.' },
+      { keywords: ['brot', 'brötchen', 'toast', 'baguette', 'kuchen', 'torte', 'gebäck', 'croissant'], months: 3, categoryHint: 'cat_brot', tip: 'Brot und Backwaren halten ca. 2–3 Monate frisch; am besten direkt scheibenweise einfrieren.' },
+      { keywords: ['suppe', 'eintopf', 'soße', 'sauce', 'bolognese', 'lasagne', 'pizza', 'gericht', 'brühe'], months: 3, categoryHint: 'cat_fertiggerichte', tip: 'Gekochte Speisen vor dem Einfrieren vollständig abkühlen lassen; 2–4 Monate haltbar.' },
+      { keywords: ['butter', 'käse', 'sahne', 'quark', 'eis'], months: 4, categoryHint: 'cat_milch', tip: 'Butter und Hartkäse (am Stück oder gerieben) lassen sich 3–6 Monate einfrieren.' }
+    ];
+
+    // --- ANWENDUNGSZUSTAND ---
+    const state = {
+      locations: [...DEFAULT_LOCATIONS],
+      categories: [...DEFAULT_CATEGORIES],
+      items: [],
+      activeLocationTab: 'ALL',
+      onlyExpiring: false,
+      currentRecommendedMonths: 6,
+      isCategoryManuallyLocked: false,
+      isMhdManuallyEdited: false
+    };
+
+    let db = null;
+    let currentUser = null;
+    let useCloud = false;
+    let typingDebounceTimer = null;
+    let activeAiRequestToken = 0;
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'frost-manager-app';
+    const LOCAL_STORAGE_KEY = 'frost_manager_desktop_store_v1';
+
+    function loadFromLocalStorage() {
+      try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.locations) && parsed.locations.length > 0) {
+          state.locations = parsed.locations;
+        }
+        if (Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+          state.categories = parsed.categories;
+        }
+        if (Array.isArray(parsed.items)) {
+          state.items = parsed.items;
+        }
+      } catch (e) {
+        console.warn('Lokaler Speicher konnte nicht geladen werden:', e);
+      }
+    }
+
+    function saveToLocalStorage() {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+          locations: state.locations,
+          categories: state.categories,
+          items: state.items,
+          updatedAt: new Date().toISOString()
+        }));
+      } catch (e) {
+        console.warn('Lokaler Speicher konnte nicht geschrieben werden:', e);
+      }
+    }
+
+    // --- INITIALISIERUNG ---
+    async function initApp() {
+      loadFromLocalStorage();
+
+      const today = getTodayISO();
+      const frozenInput = document.getElementById('item-frozen-date');
+      const mhdInput = document.getElementById('item-mhd-date');
+      if (frozenInput) frozenInput.value = today;
+      if (mhdInput) {
+        mhdInput.value = addMonthsToISO(today, 6);
+        mhdInput.addEventListener('change', () => {
+          state.isMhdManuallyEdited = true;
+        });
+      }
+
+      renderAll();
+
+      try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+          const firebaseConfig = JSON.parse(__firebase_config);
+          const app = initializeApp(firebaseConfig);
+          const auth = getAuth(app);
+          db = getFirestore(app);
+
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            const cred = await signInWithCustomToken(auth, __initial_auth_token);
+            currentUser = cred.user;
+          } else {
+            const cred = await signInAnonymously(auth);
+            currentUser = cred.user;
+          }
+
+          if (currentUser) {
+            useCloud = true;
+            setSyncStatus('online', 'Cloud-Datenbank aktiv');
+            subscribeToFirestore();
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Cloud-Initialisierung nicht verfügbar, nutze Sitzungsspeicher:', err);
+      }
+
+      useCloud = false;
+      setSyncStatus('online', 'Lokal auf diesem PC gespeichert');
+    }
+
+    function setSyncStatus(mode, text) {
+      const dot = document.getElementById('sync-status-dot');
+      const label = document.getElementById('sync-status-text');
+      if (label) label.textContent = text;
+      if (dot) {
+        dot.className = mode === 'online'
+          ? 'w-2 h-2 rounded-full bg-emerald-500'
+          : 'w-2 h-2 rounded-full bg-amber-400';
+      }
+    }
+
+    function subscribeToFirestore() {
+      if (!db || !currentUser) return;
+      const basePath = ['artifacts', appId, 'users', currentUser.uid];
+
+      onSnapshot(
+        doc(db, ...basePath, 'meta', 'settings'),
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            if (Array.isArray(data.locations) && data.locations.length > 0) {
+              state.locations = data.locations;
+            }
+            if (Array.isArray(data.categories) && data.categories.length > 0) {
+              state.categories = data.categories;
+            }
+            saveToLocalStorage();
+            renderAll();
+          } else {
+            persistSettings();
+          }
+        },
+        (err) => console.warn('Settings Snapshot Fehler:', err)
+      );
+
+      onSnapshot(
+        collection(db, ...basePath, 'freezer_items'),
+        (snapshot) => {
+          const loaded = [];
+          snapshot.forEach((docSnap) => {
+            loaded.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          state.items = loaded;
+          saveToLocalStorage();
+          renderLocationTabs();
+          renderKPIs();
+          renderInventory();
+        },
+        (err) => console.warn('Items Snapshot Fehler:', err)
+      );
+    }
+
+    async function persistSettings() {
+      saveToLocalStorage();
+      if (!useCloud || !db || !currentUser) return;
+      try {
+        await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'meta', 'settings'), {
+          locations: state.locations,
+          categories: state.categories,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error('Fehler beim Speichern der Einstellungen:', err);
+      }
+    }
+
+    async function persistItem(item) {
+      const idx = state.items.findIndex(i => i.id === item.id);
+      if (idx >= 0) {
+        state.items[idx] = item;
+      } else {
+        state.items.push(item);
+      }
+      saveToLocalStorage();
+      renderLocationTabs();
+      renderKPIs();
+      renderInventory();
+
+      if (useCloud && db && currentUser) {
+        try {
+          await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'freezer_items', item.id), item);
+        } catch (err) {
+          console.error('Fehler beim Speichern des Artikels:', err);
+          showToast('Fehler beim Synchronisieren mit der Cloud.', 'error');
+        }
+      }
+    }
+
+    async function removeItemFromStore(itemId) {
+      state.items = state.items.filter(i => i.id !== itemId);
+      saveToLocalStorage();
+      renderLocationTabs();
+      renderKPIs();
+      renderInventory();
+
+      if (useCloud && db && currentUser) {
+        try {
+          await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'freezer_items', itemId));
+        } catch (err) {
+          console.error('Fehler beim Löschen:', err);
+        }
+      }
+    }
+
+    // --- KATEGORIE & MHD LOGIK ---
+    function getCategoryById(idOrName) {
+      if (!idOrName) return null;
+      return state.categories.find(c => c.id === idOrName)
+        || state.categories.find(c => c.name.toLowerCase() === String(idOrName).toLowerCase())
+        || null;
+    }
+
+    function ensureCategoryOptionExists(catId) {
+      const select = document.getElementById('item-category');
+      if (!select || !catId) return;
+      const exists = Array.from(select.options).some(opt => opt.value === catId);
+      if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = catId;
+        opt.textContent = `📦 ${catId}`;
+        select.appendChild(opt);
+      }
+    }
+
+    function updateCategoryLockUI() {
+      const btn = document.getElementById('unlock-category-btn');
+      if (!btn) return;
+      const isEditing = Boolean(document.getElementById('edit-item-id').value);
+      if (state.isCategoryManuallyLocked && !isEditing) {
+        btn.classList.remove('hidden');
+      } else {
+        btn.classList.add('hidden');
+      }
+    }
+
+    window.onUserCategoryChange = function () {
+      state.isCategoryManuallyLocked = true;
+      updateCategoryLockUI();
+
+      const isEditing = Boolean(document.getElementById('edit-item-id').value);
+      const catId = document.getElementById('item-category').value;
+      const cat = getCategoryById(catId);
+
+      if (!isEditing && cat) {
+        applyMhdRecommendation(
+          cat.defaultMonths || 6,
+          `Standard-Richtwert für Kategorie „${cat.name}“ bei -18 °C.`,
+          'Kategorie',
+          null,
+          true
+        );
+      }
+    };
+
+    window.unlockCategoryAutoDetect = function () {
+      state.isCategoryManuallyLocked = false;
+      updateCategoryLockUI();
+      showToast('Automatische Kategorie-Erkennung aktiviert.', 'info');
+      if (document.getElementById('item-name').value.trim().length >= 2) {
+        calculateSmartMHD(false);
+      }
+    };
+
+    window.recalculateMhdFromCategoryInEdit = function () {
+      const catId = document.getElementById('item-category').value;
+      const cat = getCategoryById(catId);
+      const months = cat ? (cat.defaultMonths || 6) : 6;
+      applyMhdRecommendation(
+        months,
+        `MHD auf Richtwert der Kategorie „${cat ? cat.name : 'Auswahl'}“ (${months} Monate) aktualisiert.`,
+        'Kategorie',
+        null,
+        true
+      );
+      showToast(`Vorauss. MHD auf ${months} Monate angepasst.`, 'info');
+    };
+
+    window.handleNameTyping = function () {
+      clearTimeout(typingDebounceTimer);
+      const isEditing = Boolean(document.getElementById('edit-item-id').value);
+      if (isEditing) return;
+
+      typingDebounceTimer = setTimeout(() => {
+        calculateSmartMHD(false);
+      }, 450);
+    };
+
+    function applyMhdRecommendation(months, adviceText, sourceLabel, suggestedCategoryId = null, forceMhd = false) {
+      const safeMonths = Math.max(1, Math.min(36, parseInt(months, 10) || 6));
+      state.currentRecommendedMonths = safeMonths;
+
+      if (suggestedCategoryId && !state.isCategoryManuallyLocked) {
+        const matchedCat = getCategoryById(suggestedCategoryId);
+        if (matchedCat) {
+          document.getElementById('item-category').value = matchedCat.id;
+        }
+      }
+
+      if (forceMhd || !state.isMhdManuallyEdited) {
+        const frozenDate = document.getElementById('item-frozen-date').value || getTodayISO();
+        document.getElementById('item-mhd-date').value = addMonthsToISO(frozenDate, safeMonths);
+        state.isMhdManuallyEdited = false;
+      }
+
+      document.getElementById('mhd-source-badge').textContent = sourceLabel;
+      document.getElementById('mhd-months-label').textContent = `Empfohlene Lagerdauer: ${safeMonths} Monat${safeMonths === 1 ? '' : 'e'}`;
+      document.getElementById('mhd-advice-text').textContent = adviceText;
+    }
+
+    window.adjustMonths = function (delta) {
+      const next = Math.max(1, Math.min(36, (state.currentRecommendedMonths || 6) + delta));
+      state.currentRecommendedMonths = next;
+      const frozenDate = document.getElementById('item-frozen-date').value || getTodayISO();
+      document.getElementById('item-mhd-date').value = addMonthsToISO(frozenDate, next);
+      document.getElementById('mhd-months-label').textContent = `Empfohlene Lagerdauer: ${next} Monat${next === 1 ? '' : 'e'}`;
+      document.getElementById('mhd-source-badge').textContent = 'Angepasst';
+    };
+
+    window.recalculateMhdFromMonths = function () {
+      const frozenDate = document.getElementById('item-frozen-date').value;
+      if (!frozenDate) return;
+      document.getElementById('item-mhd-date').value = addMonthsToISO(frozenDate, state.currentRecommendedMonths || 6);
+    };
+
+    window.calculateSmartMHD = async function (useAiExplicitly = false) {
+      const nameInput = document.getElementById('item-name');
+      const rawName = nameInput.value.trim();
+      const lowerName = rawName.toLowerCase();
+
+      if (!rawName) {
+        if (useAiExplicitly) {
+          showToast('Bitte gib zuerst eine Bezeichnung ein.', 'error');
+          nameInput.focus();
+        }
+        return;
+      }
+
+      // 1. Lokale Wissensdatenbank prüfen
+      let localMatch = null;
+      for (const entry of FOOD_KNOWLEDGE_BASE) {
+        if (entry.keywords.some(kw => lowerName.includes(kw))) {
+          localMatch = entry;
+          break;
+        }
+      }
+
+      if (localMatch) {
+        applyMhdRecommendation(
+          localMatch.months,
+          localMatch.tip,
+          'Datenbank',
+          localMatch.categoryHint,
+          useAiExplicitly
+        );
+      } else {
+        const currentCat = getCategoryById(document.getElementById('item-category').value);
+        const fallbackMonths = currentCat ? (currentCat.defaultMonths || 6) : 6;
+        applyMhdRecommendation(
+          fallbackMonths,
+          `Richtwert für ${currentCat ? currentCat.name : 'dieses Lebensmittel'} bei -18 °C.`,
+          'Richtwert',
+          null,
+          useAiExplicitly
+        );
+      }
+
+      // 2. Optional KI-Check via Gemini API
+      const apiKey = typeof __gemini_api_key !== 'undefined' ? __gemini_api_key : "";
+      if (!useAiExplicitly || !apiKey) {
+        if (useAiExplicitly && localMatch) {
+          showToast(`Empfehlung ermittelt: ${localMatch.months} Monate`, 'success');
+        }
+        return;
+      }
+
+      const requestToken = ++activeAiRequestToken;
+      const spinner = document.getElementById('ai-spinner');
+      const btnLabel = document.getElementById('ai-btn-label');
+      spinner.classList.remove('hidden');
+      btnLabel.textContent = 'Prüfe...';
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      try {
+        const catNames = state.categories.map(c => `${c.id} (${c.name})`).join(', ');
+        const prompt = `Du bist ein Lebensmittelexperte für Tiefkühllagerung bei -18 °C.
+Bewerte das Lebensmittel: "${rawName}".
+Verfügbare Kategorien: ${catNames}.
+Antworte ausschließlich als JSON ohne Markdown-Formatierung:
+{"months": <Zahl zwischen 1 und 24>, "categoryId": "<passende ID aus der Liste>", "tip": "<kurzer praktischer Lagerhinweis auf Deutsch, max 140 Zeichen>"}`;
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseMimeType: 'application/json' }
+            })
+          }
+        );
+
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text && requestToken === activeAiRequestToken && document.getElementById('item-name').value.trim() === rawName) {
+          const parsed = JSON.parse(text);
+          if (parsed && parsed.months) {
+            applyMhdRecommendation(
+              parsed.months,
+              parsed.tip || 'KI-Empfehlung für Tiefkühllagerung bei -18 °C.',
+              'KI-Check',
+              parsed.categoryId || null,
+              true
+            );
+            showToast(`KI-Empfehlung: ${parsed.months} Monate Haltbarkeit`, 'success');
+          }
+        }
+      } catch (err) {
+        console.warn('KI-Abfrage übersprungen, nutze lokalen Richtwert:', err);
+        if (localMatch) {
+          showToast(`Aus Datenbank ermittelt: ${localMatch.months} Monate`, 'info');
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        spinner.classList.add('hidden');
+        btnLabel.textContent = 'MHD ermitteln';
+      }
+    };
+
+    // --- FORMULAR SPEICHERN, BEARBEITEN, DUPLIZIEREN ---
+    window.handleSaveItem = async function (event) {
+      event.preventDefault();
+
+      const editId = document.getElementById('edit-item-id').value;
+      const locationId = document.getElementById('item-location').value;
+      const drawer = document.getElementById('item-drawer').value.trim();
+      const categoryId = document.getElementById('item-category').value;
+      const name = document.getElementById('item-name').value.trim();
+      const quantity = parseFloat(document.getElementById('item-quantity').value) || 1;
+      const unit = document.getElementById('item-unit').value;
+      const frozenDate = document.getElementById('item-frozen-date').value || getTodayISO();
+      const mhdDate = document.getElementById('item-mhd-date').value || addMonthsToISO(frozenDate, 6);
+      const note = document.getElementById('item-note').value.trim();
+
+      if (!name || !locationId || !categoryId) {
+        showToast('Bitte alle Pflichtfelder ausfüllen.', 'error');
+        return;
+      }
+
+      if (editId) {
+        const existing = state.items.find(i => i.id === editId);
+        const updatedItem = {
+          id: editId,
+          locationId,
+          drawer,
+          categoryId,
+          name,
+          quantity,
+          unit,
+          frozenDate,
+          mhdDate,
+          note,
+          createdAt: existing?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await persistItem(updatedItem);
+        showToast(`„${name}“ wurde aktualisiert.`, 'success');
+        resetForm();
+        return;
+      }
+
+      const copiesInput = document.getElementById('item-copies');
+      const copies = Math.max(1, Math.min(50, parseInt(copiesInput?.value, 10) || 1));
+
+      for (let idx = 0; idx < copies; idx++) {
+        const newItem = {
+          id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${idx}`,
+          locationId,
+          drawer,
+          categoryId,
+          name,
+          quantity,
+          unit,
+          frozenDate,
+          mhdDate,
+          note,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await persistItem(newItem);
+      }
+
+      showToast(
+        copies > 1
+          ? `${copies}× „${name}“ erfolgreich eingelagert.`
+          : `„${name}“ erfolgreich eingelagert.`,
+        'success'
+      );
+      resetForm(locationId, categoryId);
+    };
+
+    window.startEditItem = function (itemId) {
+      const item = state.items.find(i => i.id === itemId);
+      if (!item) return;
+
+      document.getElementById('edit-item-id').value = item.id;
+      document.getElementById('item-location').value = item.locationId;
+      document.getElementById('item-drawer').value = item.drawer || '';
+
+      const matchedCat = getCategoryById(item.categoryId);
+      const resolvedCatId = matchedCat ? matchedCat.id : item.categoryId;
+      ensureCategoryOptionExists(resolvedCatId);
+      document.getElementById('item-category').value = resolvedCatId;
+
+      document.getElementById('item-name').value = item.name;
+      document.getElementById('item-quantity').value = item.quantity;
+      document.getElementById('item-unit').value = item.unit || 'g';
+      document.getElementById('item-frozen-date').value = item.frozenDate || getTodayISO();
+      document.getElementById('item-mhd-date').value = item.mhdDate || getTodayISO();
+      document.getElementById('item-note').value = item.note || '';
+
+      state.isCategoryManuallyLocked = true;
+      state.isMhdManuallyEdited = true;
+      updateCategoryLockUI();
+
+      document.getElementById('form-title').textContent = 'Eintrag bearbeiten';
+      document.getElementById('save-btn-text').textContent = 'Änderungen speichern';
+      document.getElementById('cancel-edit-btn').classList.remove('hidden');
+      document.getElementById('recalc-mhd-edit-btn').classList.remove('hidden');
+      document.getElementById('copies-row').classList.add('hidden');
+
+      document.getElementById('item-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    window.duplicateItem = async function (itemId) {
+      const item = state.items.find(i => i.id === itemId);
+      if (!item) return;
+
+      const copy = {
+        ...item,
+        id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      await persistItem(copy);
+      showToast(`Kopie von „${item.name}“ angelegt.`, 'success');
+    };
+
+    window.resetForm = function (keepLocationId = null, keepCategoryId = null) {
+      const today = getTodayISO();
+      document.getElementById('edit-item-id').value = '';
+      document.getElementById('item-name').value = '';
+      document.getElementById('item-drawer').value = '';
+      document.getElementById('item-quantity').value = '500';
+      document.getElementById('item-unit').value = 'g';
+      document.getElementById('item-frozen-date').value = today;
+      document.getElementById('item-note').value = '';
+      document.getElementById('item-copies').value = '1';
+
+      if (keepLocationId) {
+        document.getElementById('item-location').value = keepLocationId;
+      } else if (state.activeLocationTab !== 'ALL') {
+        document.getElementById('item-location').value = state.activeLocationTab;
+      }
+
+      if (keepCategoryId) {
+        document.getElementById('item-category').value = keepCategoryId;
+      }
+
+      state.isCategoryManuallyLocked = false;
+      state.isMhdManuallyEdited = false;
+      updateCategoryLockUI();
+
+      const currentCat = getCategoryById(document.getElementById('item-category').value);
+      const defaultMonths = currentCat ? (currentCat.defaultMonths || 6) : 6;
+      state.currentRecommendedMonths = defaultMonths;
+      document.getElementById('item-mhd-date').value = addMonthsToISO(today, defaultMonths);
+      document.getElementById('mhd-source-badge').textContent = 'Richtwert';
+      document.getElementById('mhd-months-label').textContent = `Empfohlene Lagerdauer: ${defaultMonths} Monate`;
+      document.getElementById('mhd-advice-text').textContent = 'Gib oben ein Lebensmittel ein – das voraussichtliche MHD bei -18 °C wird automatisch berechnet.';
+
+      document.getElementById('form-title').textContent = 'Neues Lebensmittel einlagern';
+      document.getElementById('save-btn-text').textContent = 'In Gefrierbestand speichern';
+      document.getElementById('cancel-edit-btn').classList.add('hidden');
+      document.getElementById('recalc-mhd-edit-btn').classList.add('hidden');
+      document.getElementById('copies-row').classList.remove('hidden');
+    };
+
+    window.adjustItemQuantity = async function (itemId, delta) {
+      const item = state.items.find(i => i.id === itemId);
+      if (!item) return;
+
+      const step = (item.unit === 'g') ? 100 : (item.unit === 'kg' ? 0.5 : 1);
+      const nextQty = Math.round((Number(item.quantity) + delta * step) * 100) / 100;
+
+      if (nextQty <= 0) {
+        confirmAction(
+          'Vorrat aufgebraucht?',
+          `Soll „${item.name}“ aus dem Gefrierbestand entfernt werden?`,
+          async () => {
+            await removeItemFromStore(itemId);
+            showToast(`„${item.name}“ als aufgebraucht entfernt.`, 'info');
+          }
+        );
+        return;
+      }
+
+      await persistItem({
+        ...item,
+        quantity: nextQty,
+        updatedAt: new Date().toISOString()
+      });
+    };
+
+    window.consumeItem = function (itemId) {
+      const item = state.items.find(i => i.id === itemId);
+      if (!item) return;
+      confirmAction(
+        'Eintrag austragen',
+        `„${item.name}“ (${formatQuantity(item.quantity)} ${item.unit}) als verbraucht aus der Liste entfernen?`,
+        async () => {
+          await removeItemFromStore(itemId);
+          showToast(`„${item.name}“ ausgetragen.`, 'success');
+        }
+      );
+    };
+
+    // --- RENDERING ---
+    function renderAll() {
+      populateSelects();
+      renderLocationTabs();
+      renderKPIs();
+      renderInventory();
+    }
+
+    function populateSelects() {
+      const locSelect = document.getElementById('item-location');
+      const catSelect = document.getElementById('item-category');
+      const filterCatSelect = document.getElementById('filter-category');
+
+      const prevLoc = locSelect.value;
+      const prevCat = catSelect.value;
+      const prevFilterCat = filterCatSelect.value;
+
+      const sortedLocs = [...state.locations].sort((a, b) => (a.order || 0) - (b.order || 0));
+      locSelect.innerHTML = sortedLocs
+        .map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.name)}</option>`)
+        .join('');
+      if (prevLoc && sortedLocs.some(l => l.id === prevLoc)) {
+        locSelect.value = prevLoc;
+      }
+
+      catSelect.innerHTML = state.categories
+        .map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.icon || '📦')} ${escapeHtml(c.name)}</option>`)
+        .join('');
+      if (prevCat) {
+        ensureCategoryOptionExists(prevCat);
+        catSelect.value = prevCat;
+      }
+
+      filterCatSelect.innerHTML = `<option value="ALL">Alle Kategorien</option>` +
+        state.categories
+          .map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.icon || '📦')} ${escapeHtml(c.name)}</option>`)
+          .join('');
+      if (prevFilterCat && (prevFilterCat === 'ALL' || state.categories.some(c => c.id === prevFilterCat))) {
+        filterCatSelect.value = prevFilterCat;
+      }
+    }
+
+    function renderLocationTabs() {
+      const container = document.getElementById('location-tabs');
+      if (!container) return;
+
+      const sortedLocs = [...state.locations].sort((a, b) => (a.order || 0) - (b.order || 0));
+      const allCount = state.items.length;
+
+      let html = `
+        <button type="button" onclick="selectLocationTab('ALL')"
+          class="shrink-0 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 ${
+            state.activeLocationTab === 'ALL'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }">
+          <span>Alle Gefrierorte</span>
+          <span class="px-1.5 py-0.5 rounded-md text-[11px] ${
+            state.activeLocationTab === 'ALL' ? 'bg-slate-700 text-slate-200' : 'bg-slate-200 text-slate-700'
+          }">${allCount}</span>
+        </button>
+      `;
+
+      for (const loc of sortedLocs) {
+        const count = state.items.filter(i => i.locationId === loc.id).length;
+        const active = state.activeLocationTab === loc.id;
+        html += `
+          <button type="button" onclick="selectLocationTab('${escapeHtml(loc.id)}')"
+            class="shrink-0 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 ${
+              active
+                ? 'bg-sky-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }">
+            <span>❄️ ${escapeHtml(loc.name)}</span>
+            <span class="px-1.5 py-0.5 rounded-md text-[11px] ${
+              active ? 'bg-sky-500 text-white' : 'bg-slate-200 text-slate-700'
+            }">${count}</span>
+          </button>
+        `;
+      }
+
+      container.innerHTML = html;
+
+      const quickLabel = document.getElementById('quick-print-label');
+      if (quickLabel) {
+        if (state.activeLocationTab === 'ALL') {
+          quickLabel.textContent = 'Alle Listen drucken';
+        } else {
+          const activeLoc = state.locations.find(l => l.id === state.activeLocationTab);
+          quickLabel.textContent = activeLoc ? `Liste „${activeLoc.name}“ drucken` : 'Aktuelle Ansicht drucken';
+        }
+      }
+    }
+
+    window.selectLocationTab = function (locId) {
+      state.activeLocationTab = locId;
+      if (locId !== 'ALL' && !document.getElementById('edit-item-id').value) {
+        document.getElementById('item-location').value = locId;
+      }
+      renderLocationTabs();
+      renderKPIs();
+      renderInventory();
+    };
+
+    function getItemsForCurrentLocation() {
+      if (state.activeLocationTab === 'ALL') return state.items;
+      return state.items.filter(i => i.locationId === state.activeLocationTab);
+    }
+
+    function renderKPIs() {
+      const scopedItems = getItemsForCurrentLocation();
+      let fresh = 0;
+      let soon = 0;
+      let expired = 0;
+
+      for (const item of scopedItems) {
+        const days = getDaysUntil(item.mhdDate);
+        if (days < 0) expired++;
+        else if (days <= 30) soon++;
+        else fresh++;
+      }
+
+      document.getElementById('kpi-total').textContent = scopedItems.length;
+      document.getElementById('kpi-fresh').textContent = fresh;
+      document.getElementById('kpi-soon').textContent = soon;
+      document.getElementById('kpi-expired').textContent = expired;
+
+      const activeLoc = state.locations.find(l => l.id === state.activeLocationTab);
+      document.getElementById('kpi-location-hint').textContent =
+        state.activeLocationTab === 'ALL' ? 'Alle Gefrierorte' : (activeLoc ? activeLoc.name : '');
+    }
+
+    window.toggleExpiringFilter = function () {
+      state.onlyExpiring = !state.onlyExpiring;
+      const btn = document.getElementById('filter-expiring-btn');
+      if (state.onlyExpiring) {
+        btn.classList.add('border-amber-400', 'bg-amber-50', 'text-amber-900');
+      } else {
+        btn.classList.remove('border-amber-400', 'bg-amber-50', 'text-amber-900');
+      }
+      renderInventory();
+    };
+
+    window.resetFilters = function () {
+      document.getElementById('filter-search').value = '';
+      document.getElementById('filter-category').value = 'ALL';
+      state.onlyExpiring = false;
+      const btn = document.getElementById('filter-expiring-btn');
+      btn.classList.remove('border-amber-400', 'bg-amber-50', 'text-amber-900');
+      renderInventory();
+    };
+
+    window.renderInventory = function () {
+      const listEl = document.getElementById('inventory-list');
+      if (!listEl) return;
+
+      const searchTerm = (document.getElementById('filter-search')?.value || '').trim().toLowerCase();
+      const catFilter = document.getElementById('filter-category')?.value || 'ALL';
+      const sortMode = document.getElementById('filter-sort')?.value || 'mhd_asc';
+
+      const resetBtn = document.getElementById('reset-filters-btn');
+      if (resetBtn) {
+        if (searchTerm || catFilter !== 'ALL' || state.onlyExpiring) {
+          resetBtn.classList.remove('hidden');
+        } else {
+          resetBtn.classList.add('hidden');
+        }
+      }
+
+      let filtered = getItemsForCurrentLocation().filter(item => {
+        if (catFilter !== 'ALL' && item.categoryId !== catFilter) return false;
+        if (state.onlyExpiring && getDaysUntil(item.mhdDate) > 30) return false;
+        if (searchTerm) {
+          const hay = `${item.name} ${item.drawer || ''} ${item.note || ''}`.toLowerCase();
+          if (!hay.includes(searchTerm)) return false;
+        }
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        if (sortMode === 'mhd_asc') {
+          return (a.mhdDate || '9999-12-31').localeCompare(b.mhdDate || '9999-12-31');
+        }
+        if (sortMode === 'frozen_desc') {
+          return (b.frozenDate || '').localeCompare(a.frozenDate || '');
+        }
+        if (sortMode === 'name_asc') {
+          return (a.name || '').localeCompare(b.name || '', 'de');
+        }
+        if (sortMode === 'category_asc') {
+          const catA = getCategoryById(a.categoryId)?.name || '';
+          const catB = getCategoryById(b.categoryId)?.name || '';
+          return catA.localeCompare(catB, 'de') || (a.name || '').localeCompare(b.name || '', 'de');
+        }
+        return 0;
+      });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center space-y-2">
+            <div class="text-3xl">🧊</div>
+            <div class="text-base font-bold text-slate-800">Keine Einträge gefunden</div>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">
+              Lege links ein neues Lebensmittel an oder passe die aktiven Filter oben an.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(item => {
+        const cat = getCategoryById(item.categoryId);
+        const loc = state.locations.find(l => l.id === item.locationId);
+        const days = getDaysUntil(item.mhdDate);
+
+        let badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        let statusText = `MHD ${formatDateDE(item.mhdDate)}`;
+        let cardBorder = 'border-slate-200';
+
+        if (days < 0) {
+          badgeClass = 'bg-rose-100 text-rose-800 border-rose-300';
+          statusText = `MHD abgelaufen (${formatDateDE(item.mhdDate)})`;
+          cardBorder = 'border-rose-300';
+        } else if (days <= 30) {
+          badgeClass = 'bg-amber-100 text-amber-800 border-amber-300';
+          statusText = days === 0 ? 'Läuft heute ab!' : `Noch ${days} Tage (${formatDateDE(item.mhdDate)})`;
+          cardBorder = 'border-amber-300';
+        }
+
+        return `
+          <div class="bg-white rounded-2xl border ${cardBorder} p-4 shadow-xs hover:shadow-sm transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-1.5 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">
+                  <span>${escapeHtml(cat?.icon || '📦')}</span>
+                  <span>${escapeHtml(cat?.name || item.categoryId || 'Kategorie')}</span>
+                </span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-sky-50 text-sky-800 text-xs font-semibold">
+                  ❄️ ${escapeHtml(loc?.name || 'Gefrierort')}${item.drawer ? ` · ${escapeHtml(item.drawer)}` : ''}
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-lg border text-xs font-bold ${badgeClass}">
+                  ${escapeHtml(statusText)}
+                </span>
+              </div>
+
+              <div class="text-base font-bold text-slate-900 truncate">${escapeHtml(item.name)}</div>
+
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span>Eingefroren: <strong class="text-slate-700">${formatDateDE(item.frozenDate)}</strong></span>
+                ${item.note ? `<span class="text-slate-600 italic">„${escapeHtml(item.note)}“</span>` : ''}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+              <div class="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-0.5">
+                <button type="button" onclick="adjustItemQuantity('${escapeHtml(item.id)}', -1)" title="Menge verringern"
+                  class="w-7 h-7 rounded-lg hover:bg-white text-slate-700 font-bold text-sm transition">−</button>
+                <span class="px-2.5 text-xs sm:text-sm font-extrabold text-slate-900 whitespace-nowrap">${formatQuantity(item.quantity)} ${escapeHtml(item.unit)}</span>
+                <button type="button" onclick="adjustItemQuantity('${escapeHtml(item.id)}', 1)" title="Menge erhöhen"
+                  class="w-7 h-7 rounded-lg hover:bg-white text-slate-700 font-bold text-sm transition">+</button>
+              </div>
+
+              <button type="button" onclick="duplicateItem('${escapeHtml(item.id)}')" title="Eintrag kopieren / duplizieren"
+                class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+
+              <button type="button" onclick="startEditItem('${escapeHtml(item.id)}')" title="Eintrag bearbeiten"
+                class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-sky-700 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+
+              <button type="button" onclick="consumeItem('${escapeHtml(item.id)}')" title="Als verbraucht entfernen"
+                class="p-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    // --- DRUCKFUNKTION (MAGNETWAND-LISTE) ---
+    window.openPrintDialog = function () {
+      const select = document.getElementById('print-location-select');
+      const sortedLocs = [...state.locations].sort((a, b) => (a.order || 0) - (b.order || 0));
+      select.innerHTML = `<option value="ALL">Alle Gefrierorte (jeweils auf eigener Seite)</option>` +
+        sortedLocs.map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.name)}</option>`).join('');
+      select.value = state.activeLocationTab || 'ALL';
+      openModal('print-modal');
+    };
+
+    window.printCurrentLocationDirectly = function () {
+      buildAndTriggerPrint(state.activeLocationTab || 'ALL', 'category_drawer', true);
+    };
+
+    window.executePrintFromModal = function () {
+      const locId = document.getElementById('print-location-select').value;
+      const sortMode = document.getElementById('print-sort-select').value;
+      const addEmptyRows = document.getElementById('print-empty-rows').checked;
+      closeModal('print-modal');
+      buildAndTriggerPrint(locId, sortMode, addEmptyRows);
+    };
+
+    let lastGeneratedPrintHtml = '';
+
+    function buildAndTriggerPrint(locationId, sortMode, addEmptyRows) {
+      const printArea = document.getElementById('print-area');
+      const previewSheet = document.getElementById('print-preview-sheet');
+      const sortedLocs = [...state.locations].sort((a, b) => (a.order || 0) - (b.order || 0));
+      const targetLocs = locationId === 'ALL'
+        ? sortedLocs
+        : sortedLocs.filter(l => l.id === locationId);
+
+      const todayStr = formatDateDE(getTodayISO());
+
+      const sectionsHtml = targetLocs.map((loc, idx) => {
+        const locItems = state.items.filter(i => i.locationId === loc.id);
+        locItems.sort((a, b) => {
+          if (sortMode === 'mhd_asc') {
+            return (a.mhdDate || '9999-12-31').localeCompare(b.mhdDate || '9999-12-31');
+          }
+          if (sortMode === 'drawer_asc') {
+            return (a.drawer || 'zzz').localeCompare(b.drawer || 'zzz', 'de') || (a.name || '').localeCompare(b.name || '', 'de');
+          }
+          if (sortMode === 'name_asc') {
+            return (a.name || '').localeCompare(b.name || '', 'de');
+          }
+          const catA = getCategoryById(a.categoryId)?.name || '';
+          const catB = getCategoryById(b.categoryId)?.name || '';
+          return catA.localeCompare(catB, 'de') || (a.drawer || 'zzz').localeCompare(b.drawer || 'zzz', 'de');
+        });
+
+        const rowsHtml = locItems.map(item => {
+          const cat = getCategoryById(item.categoryId);
+          return `
+            <tr>
+              <td style="width: 28px; text-align: center;"><span class="print-checkbox"></span></td>
+              <td>${escapeHtml(cat?.name || '')}</td>
+              <td><strong>${escapeHtml(item.name)}</strong>${item.note ? ` <span style="color:#475569; font-size:9pt;">(${escapeHtml(item.note)})</span>` : ''}</td>
+              <td>${escapeHtml(item.drawer || '—')}</td>
+              <td style="white-space:nowrap;">${formatQuantity(item.quantity)} ${escapeHtml(item.unit)}</td>
+              <td style="white-space:nowrap;">${formatDateDE(item.frozenDate)}</td>
+              <td style="white-space:nowrap;"><strong>${formatDateDE(item.mhdDate)}</strong></td>
+            </tr>
+          `;
+        }).join('');
+
+        const emptyRowsHtml = addEmptyRows
+          ? Array.from({ length: 3 }).map(() => `
+              <tr>
+                <td style="text-align:center;"><span class="print-checkbox"></span></td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+              </tr>
+            `).join('')
+          : '';
+
+        return `
+          <div class="${idx > 0 ? 'print-section-break' : ''}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #0f172a; padding-bottom:6px; margin-bottom:8px;">
+              <div>
+                <div style="font-size:9pt; text-transform:uppercase; letter-spacing:0.06em; color:#475569;">Gefrier-Bestandsliste</div>
+                <h2 style="font-size:16pt; font-weight:800; margin:0;">❄️ ${escapeHtml(loc.name)}</h2>
+              </div>
+              <div style="text-align:right; font-size:9pt; color:#334155;">
+                Stand: <strong>${todayStr}</strong> · ${locItems.length} Einträge
+              </div>
+            </div>
+            <table class="print-table">
+              <thead>
+                <tr>
+                  <th style="width:28px; text-align:center;">✓</th>
+                  <th>Kategorie</th>
+                  <th>Inhalt / Bezeichnung</th>
+                  <th>Fach</th>
+                  <th>Menge</th>
+                  <th>Eingefroren</th>
+                  <th>Vorauss. MHD</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml || '<tr><td colspan="7" style="text-align:center; color:#64748b;">Keine Einträge in diesem Gefrierort</td></tr>'}
+                ${emptyRowsHtml}
+              </tbody>
+            </table>
+            <div style="margin-top:6px; font-size:8pt; color:#64748b; display:flex; justify-content:space-between;">
+              <span>Frost-Manager · Entwickelt von <strong>Kai Fischer</strong></span>
+              <span>Bei -18 °C lagern · Entnommene Vorräte einfach abhaken (✓)</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lastGeneratedPrintHtml = sectionsHtml;
+      if (printArea) printArea.innerHTML = sectionsHtml;
+      if (previewSheet) previewSheet.innerHTML = sectionsHtml;
+
+      openModal('print-preview-modal');
+      setTimeout(() => {
+        triggerDirectBrowserPrint();
+      }, 150);
+    }
+
+    function buildStandalonePrintDocument(bodyContent) {
+      return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gefrier-Bestandsliste – Druckansicht</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm 14mm; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      margin: 0;
+      padding: 16px;
+      font-size: 10.5pt;
+    }
+    .no-print-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+    }
+    .no-print-bar button {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .print-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .print-table th, .print-table td {
+      border: 1px solid #334155;
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    .print-table th {
+      background-color: #f1f5f9 !important;
+      font-weight: 700;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .print-checkbox {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid #0f172a;
+      border-radius: 2px;
+      vertical-align: middle;
+    }
+    .print-section-break { page-break-before: always; margin-top: 24px; }
+    @media print {
+      body { padding: 0; }
+      .no-print-bar { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print-bar">
+    <span><strong>Gefrier-Bestandsliste</strong> – Druckansicht</span>
+    <button onclick="window.print()">🖨️ Jetzt drucken</button>
+  </div>
+  ${bodyContent}
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() { window.print(); }, 250);
+    });
+  <\/script>
+</body>
+</html>`;
+    }
+
+    window.triggerDirectBrowserPrint = function () {
+      try {
+        // Verstecktes Iframe für sauberen Druck ohne Haupt-App-Rahmen
+        let printFrame = document.getElementById('hidden-print-frame');
+        if (!printFrame) {
+          printFrame = document.createElement('iframe');
+          printFrame.id = 'hidden-print-frame';
+          printFrame.style.position = 'fixed';
+          printFrame.style.right = '0';
+          printFrame.style.bottom = '0';
+          printFrame.style.width = '0';
+          printFrame.style.height = '0';
+          printFrame.style.border = '0';
+          document.body.appendChild(printFrame);
+        }
+        const doc = printFrame.contentWindow.document;
+        doc.open();
+        doc.write(buildStandalonePrintDocument(lastGeneratedPrintHtml));
+        doc.close();
+
+        setTimeout(() => {
+          try {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+          } catch (e) {
+            window.print();
+          }
+        }, 200);
+      } catch (err) {
+        window.print();
+      }
+    };
+
+    window.openPrintInNewTab = function () {
+      const fullHtml = buildStandalonePrintDocument(lastGeneratedPrintHtml);
+      const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) {
+        showToast('Pop-up blockiert – nutze bitte „Druckdatei (.html)“.', 'info');
+        downloadPrintableHTML();
+      }
+    };
+
+    window.downloadPrintableHTML = function () {
+      const fullHtml = buildStandalonePrintDocument(lastGeneratedPrintHtml);
+      downloadFile(fullHtml, `gefrierliste-druck-${getTodayISO()}.html`, 'text/html;charset=utf-8');
+      showToast('Druckdatei heruntergeladen – einfach öffnen & drucken.', 'success');
+    };
+
+    // --- EINSTELLUNGEN (STANDORTE & KATEGORIEN) ---
+    window.openSettingsModal = function () {
+      renderSettingsLists();
+      openModal('settings-modal');
+    };
+
+    function renderSettingsLists() {
+      const locList = document.getElementById('settings-locations-list');
+      const catList = document.getElementById('settings-categories-list');
+
+      locList.innerHTML = state.locations.map(loc => `
+        <div class="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50">
+          <span class="text-sm font-semibold text-slate-800">❄️ ${escapeHtml(loc.name)}</span>
+          ${state.locations.length > 1
+            ? `<button type="button" onclick="deleteLocation('${escapeHtml(loc.id)}')" class="text-xs font-bold text-rose-600 hover:text-rose-800 px-2 py-1">Entfernen</button>`
+            : '<span class="text-[11px] text-slate-400">Standard</span>'}
+        </div>
+      `).join('');
+
+      catList.innerHTML = state.categories.map(cat => `
+        <div class="flex items-center justify-between px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50">
+          <div class="flex items-center gap-2">
+            <span>${escapeHtml(cat.icon || '📦')}</span>
+            <span class="text-sm font-semibold text-slate-800">${escapeHtml(cat.name)}</span>
+            <span class="text-xs text-slate-500">(${cat.defaultMonths || 6} Monate)</span>
+          </div>
+          ${state.categories.length > 1
+            ? `<button type="button" onclick="deleteCategory('${escapeHtml(cat.id)}')" class="text-xs font-bold text-rose-600 hover:text-rose-800 px-2 py-1">Entfernen</button>`
+            : ''}
+        </div>
+      `).join('');
+    }
+
+    window.addLocationFromSettings = async function () {
+      const input = document.getElementById('new-location-input');
+      const name = input.value.trim();
+      if (!name) return;
+      const newLoc = {
+        id: `loc_${Date.now()}`,
+        name,
+        order: state.locations.length + 1
+      };
+      state.locations.push(newLoc);
+      input.value = '';
+      await persistSettings();
+      renderAll();
+      renderSettingsLists();
+      showToast(`Gefrierort „${name}“ hinzugefügt.`, 'success');
+    };
+
+    window.deleteLocation = async function (locId) {
+      if (state.locations.length <= 1) return;
+      state.locations = state.locations.filter(l => l.id !== locId);
+      if (state.activeLocationTab === locId) state.activeLocationTab = 'ALL';
+      await persistSettings();
+      renderAll();
+      renderSettingsLists();
+    };
+
+    window.addCategoryFromSettings = async function () {
+      const icon = document.getElementById('new-cat-icon').value.trim() || '📦';
+      const name = document.getElementById('new-cat-name').value.trim();
+      const months = Math.max(1, Math.min(36, parseInt(document.getElementById('new-cat-months').value, 10) || 6));
+      if (!name) return;
+
+      const newCat = {
+        id: `cat_${Date.now()}`,
+        name,
+        icon,
+        defaultMonths: months
+      };
+      state.categories.push(newCat);
+      document.getElementById('new-cat-name').value = '';
+      await persistSettings();
+      renderAll();
+      renderSettingsLists();
+      showToast(`Kategorie „${name}“ hinzugefügt.`, 'success');
+    };
+
+    window.deleteCategory = async function (catId) {
+      if (state.categories.length <= 1) return;
+      state.categories = state.categories.filter(c => c.id !== catId);
+      await persistSettings();
+      renderAll();
+      renderSettingsLists();
+    };
+
+    window.quickAddLocation = function () {
+      openPromptModal('Neuer Gefrierort', 'Name (z. B. Garage, Kellertruhe)', async (val) => {
+        const name = val.trim();
+        if (!name) return;
+        const newLoc = { id: `loc_${Date.now()}`, name, order: state.locations.length + 1 };
+        state.locations.push(newLoc);
+        await persistSettings();
+        renderAll();
+        document.getElementById('item-location').value = newLoc.id;
+        showToast(`Gefrierort „${name}“ angelegt.`, 'success');
+      });
+    };
+
+    window.quickAddCategory = function () {
+      openPromptModal('Neue Kategorie', 'Kategoriename (z. B. Eis & Desserts)', async (val) => {
+        const name = val.trim();
+        if (!name) return;
+        const newCat = { id: `cat_${Date.now()}`, name, icon: '📦', defaultMonths: 6 };
+        state.categories.push(newCat);
+        await persistSettings();
+        renderAll();
+        document.getElementById('item-category').value = newCat.id;
+        onUserCategoryChange();
+        showToast(`Kategorie „${name}“ angelegt.`, 'success');
+      });
+    };
+
+    // --- BACKUP (EXPORT & IMPORT) ---
+    window.openBackupModal = function () {
+      openModal('backup-modal');
+    };
+
+    window.handleBackupDrop = async function (event) {
+      event.preventDefault();
+      event.currentTarget.classList.remove('border-sky-500', 'bg-sky-100/70');
+      const file = event.dataTransfer?.files?.[0];
+      if (file) {
+        await processBackupFile(file);
+      }
+    };
+
+    window.importDataJSON = async function (event) {
+      const file = event.target?.files?.[0];
+      if (file) {
+        await processBackupFile(file);
+        event.target.value = '';
+      }
+    };
+
+    async function processBackupFile(file) {
+      try {
+        const rawText = await file.text();
+        const parsed = JSON.parse(rawText);
+
+        const incomingItems = Array.isArray(parsed)
+          ? parsed
+          : (Array.isArray(parsed.items) ? parsed.items : null);
+
+        if (!incomingItems) {
+          showToast('Ungültiges Backup-Format (keine Einträge gefunden).', 'error');
+          return;
+        }
+
+        const mode = document.querySelector('input[name="import-mode"]:checked')?.value || 'merge';
+
+        if (mode === 'replace') {
+          const existingIds = state.items.map(i => i.id);
+          for (const oldId of existingIds) {
+            await removeItemFromStore(oldId);
+          }
+        }
+
+        if (Array.isArray(parsed.locations) && parsed.locations.length > 0) {
+          if (mode === 'replace') {
+            state.locations = parsed.locations;
+          } else {
+            for (const loc of parsed.locations) {
+              if (loc.id && !state.locations.some(l => l.id === loc.id)) {
+                state.locations.push(loc);
+              }
+            }
+          }
+        }
+
+        if (Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+          if (mode === 'replace') {
+            state.categories = parsed.categories;
+          } else {
+            for (const cat of parsed.categories) {
+              if (cat.id && !state.categories.some(c => c.id === cat.id)) {
+                state.categories.push(cat);
+              }
+            }
+          }
+        }
+
+        await persistSettings();
+
+        const fallbackLocId = state.locations[0]?.id || 'loc_kueche';
+        const fallbackCatId = state.categories[0]?.id || 'cat_sonstiges';
+        let importedCount = 0;
+
+        for (let idx = 0; idx < incomingItems.length; idx++) {
+          const entry = incomingItems[idx];
+          if (!entry || !entry.name) continue;
+
+          const itemId = (mode === 'merge' && entry.id && state.items.some(i => i.id === entry.id))
+            ? `${entry.id}_imp_${idx}`
+            : (entry.id || `item_${Date.now()}_${idx}`);
+
+          const cleanItem = {
+            id: itemId,
+            locationId: state.locations.some(l => l.id === entry.locationId) ? entry.locationId : fallbackLocId,
+            drawer: entry.drawer || '',
+            categoryId: entry.categoryId || fallbackCatId,
+            name: String(entry.name),
+            quantity: Number(entry.quantity) || 1,
+            unit: entry.unit || 'Stk.',
+            frozenDate: entry.frozenDate || getTodayISO(),
+            mhdDate: entry.mhdDate || addMonthsToISO(getTodayISO(), 6),
+            note: entry.note || '',
+            createdAt: entry.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          await persistItem(cleanItem);
+          importedCount++;
+        }
+
+        renderAll();
+        closeModal('backup-modal');
+        showToast(`${importedCount} Einträge erfolgreich aus Backup geladen.`, 'success');
+      } catch (err) {
+        console.error('Fehler beim Backup-Import:', err);
+        showToast('Backup-Datei konnte nicht gelesen werden.', 'error');
+      }
+    }
+
+    window.exportDataJSON = function () {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        locations: state.locations,
+        categories: state.categories,
+        items: state.items
+      };
+      downloadFile(JSON.stringify(payload, null, 2), `frost-manager-backup-${getTodayISO()}.json`, 'application/json');
+    };
+
+    window.exportDataCSV = function () {
+      const header = ['Gefrierort', 'Schubfach', 'Kategorie', 'Inhalt', 'Menge', 'Einheit', 'Eingefroren', 'Vorauss. MHD', 'Notiz'];
+      const rows = state.items.map(i => {
+        const loc = state.locations.find(l => l.id === i.locationId)?.name || '';
+        const cat = getCategoryById(i.categoryId)?.name || '';
+        return [loc, i.drawer || '', cat, i.name, i.quantity, i.unit, i.frozenDate, i.mhdDate, i.note || '']
+          .map(v => `"${String(v).replace(/"/g, '""')}"`).join(';');
+      });
+      downloadFile('\uFEFF' + [header.join(';'), ...rows].join('\n'), `frost-manager-${getTodayISO()}.csv`, 'text/csv;charset=utf-8');
+    };
+
+    function downloadFile(content, filename, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // --- MODALS & DIALOG-HELFER ---
+    window.openModal = function (id) {
+      document.getElementById(id)?.classList.remove('hidden');
+    };
+
+    window.closeModal = function (id) {
+      document.getElementById(id)?.classList.add('hidden');
+    };
+
+    function confirmAction(title, message, onConfirm) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      const okBtn = document.getElementById('confirm-ok-btn');
+      okBtn.onclick = async () => {
+        closeModal('confirm-modal');
+        await onConfirm();
+      };
+      openModal('confirm-modal');
+    }
+
+    function openPromptModal(title, label, onSubmit) {
+      document.getElementById('prompt-title').textContent = title;
+      document.getElementById('prompt-label').textContent = label;
+      const input = document.getElementById('prompt-input');
+      input.value = '';
+      const okBtn = document.getElementById('prompt-ok-btn');
+      okBtn.onclick = async () => {
+        const val = input.value;
+        closeModal('prompt-modal');
+        await onSubmit(val);
+      };
+      openModal('prompt-modal');
+      setTimeout(() => input.focus(), 50);
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const colors = type === 'success'
+        ? 'bg-emerald-900 text-white border-emerald-700'
+        : type === 'error'
+          ? 'bg-rose-900 text-white border-rose-700'
+          : 'bg-slate-900 text-white border-slate-700';
+
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs sm:text-sm font-semibold transition-all ${colors}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 250);
+      }, 3200);
+    }
+
+    // --- DATUMS- & FORMAT-HELFER ---
+    function getTodayISO() {
+      const now = new Date();
+      const offset = now.getTimezoneOffset() * 60000;
+      return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+    }
+
+    function addMonthsToISO(isoDate, months) {
+      const [y, m, d] = (isoDate || getTodayISO()).split('-').map(Number);
+      const date = new Date(y, (m - 1) + months, d);
+      const yy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${yy}-${mm}-${dd}`;
+    }
+
+    function getDaysUntil(isoDate) {
+      if (!isoDate) return 999;
+      const today = new Date(getTodayISO() + 'T00:00:00');
+      const target = new Date(isoDate + 'T00:00:00');
+      return Math.round((target - today) / 86400000);
+    }
+
+    function formatDateDE(isoDate) {
+      if (!isoDate || !isoDate.includes('-')) return isoDate || '—';
+      const [y, m, d] = isoDate.split('-');
+      return `${d}.${m}.${y}`;
+    }
+
+    function formatQuantity(qty) {
+      const num = Number(qty);
+      if (Number.isNaN(num)) return qty;
+      return num.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    initApp();
+  </script>
+</body>
+</html>
